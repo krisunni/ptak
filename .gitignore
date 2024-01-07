@@ -34,3 +34,5 @@ override.tf.json
 terraform.rc
 terraform/.terraform.lock.hcl
 terraform/terraform-plugin-proxmox.log
+ansible/config
+*.out

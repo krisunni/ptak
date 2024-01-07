@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     proxmox = {
-      source  = "TheGameProfi/proxmox"
-      version = "2.9.15"
+      source  = "terraform.local/local/frostyfab"
+      version = "2.9.14"
     }
   }
 }
