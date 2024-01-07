@@ -1,0 +1,4 @@
+[submodule "terraform/.terraform/providers/terraform.local/frostyfab"]
+	path = terraform/.terraform/providers/terraform.local/frostyfab
+	url = https://github.com/frostyfab/terraform-provider-proxmox.git
+	branch = fix-memory-type-proxmox-8.0.4-workaround

@@ -1,0 +1,27 @@
+# Ansible script for extracting and saving the Kubernetes join command
+
+# Target host group, connection settings, and variables
+- hosts: kubeMain # Targeting hosts in the kubeMain group
+  become: false # Not becoming root for these tasks
+  remote_user: ubuntu # Connecting using the ubuntu user
+
+  vars_files:
+    - vars.yml # Including external variables from ansible-vars.yml
+
+  # Tasks
+  tasks:
+    # Task 1: Extract the join command
+    - name: Extract the join command
+      become: true # Becoming root for this task
+      command: "kubeadm token create --print-join-command" # Generating the join command
+      register: join_command # Storing the result in the 'join_command' variable
+
+    # Task 2: Show the extracted join command
+    - name: Show join command
+      debug:
+        var: join_command # Displaying the join command in the Ansible output
+
+    # Task 3: Save kubeadm join command for the cluster
+    - name: Save kubeadm join command for cluster
+      local_action: copy content={{ join_command.stdout_lines | last | trim }} dest={{ join_command_location }}
+      ## Extracting the last line of the command and trimming whitespace and save to the specified destination (defaults to local cwd/join_command.out)

@@ -1,0 +1,40 @@
+# Ansible script for configuring Docker and joining Kubernetes agents to the cluster
+
+# Target host group, connection settings, and variables
+- hosts: kubeAgents # Targeting hosts in the kube_agents group
+  become: true # Becoming root for these tasks
+  remote_user: ubuntu # Connecting using the ubuntu user
+
+  vars_files:
+    - vars.yml # Including external variables from ansible-vars.yml
+
+  # Tasks
+  tasks:
+    # Task 1: Set Docker to use systemd cgroups driver
+    - name: Set Docker to use systemd cgroups driver
+      copy:
+        dest: "/etc/docker/daemon.json"
+        content: |
+          {
+            "exec-opts": ["native.cgroupdriver=systemd"]
+          }
+
+    # Task 2: Restart Docker
+    - name: Restart Docker
+      service:
+        name: docker
+        state: restarted
+
+    # Task 3: Read the pre-generated join command from a file
+    - name: Read join command
+      debug: msg={{ lookup('file', join_command_location) }}
+      register: join_command_local
+
+    # Task 4: Show the read join command
+    - name: Show join command
+      debug:
+        var: join_command_local.msg
+
+    # Task 5: Join agents to the Kubernetes cluster using the pre-generated join command
+    - name: Join agents to cluster
+      command: "{{ join_command_local.msg }}"

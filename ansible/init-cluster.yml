@@ -1,0 +1,98 @@
+# Ansible script to automate the setup of a Kubernetes cluster on a server
+
+# Inventory and Connection Settings
+- hosts: kubeMain # Target host group
+  become: true # Elevate privileges to root
+  remote_user: ubuntu # Remote user for connection
+  vars_files:
+    - vars.yml # Include external variables from vars.yml
+
+  # Tasks
+  tasks:
+    # Set Docker to use systemd cgroups driver
+    - name: set docker to use systemd cgroups driver
+      copy:
+        dest: "/etc/docker/daemon.json"
+        content: |
+          {
+            "exec-opts": ["native.cgroupdriver=systemd"]
+          }
+
+    # Restart Docker
+    - name: restart docker
+      service:
+        name: docker
+        state: restarted
+
+    # Initialize Kubernetes cluster
+    - name: Initialize Kubernetes cluster
+      command: "kubeadm init --pod-network-cidr {{ pod_cidr }}"
+      args:
+        creates: /etc/kubernetes/admin.conf # Skip if the file already exists
+      register: kube_init
+
+    # Show kube init info
+    - name: show kube init info
+      debug:
+        var: kube_init
+
+    # Create .kube directory in user home
+    - name: Create .kube directory in user home
+      file:
+        path: "{{ home_dir }}/.kube"
+        state: directory
+        owner: 1000
+        group: 1000
+
+    # Configure .kube/config files in user home
+    - name: Configure .kube/config files in user home
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: "{{ home_dir }}/.kube/config"
+        remote_src: yes
+        owner: 1000
+        group: 1000
+
+    # Restart kubelet for config changes
+    - name: restart kubelet for config changes
+      service:
+        name: kubelet
+        state: restarted
+
+    # Get calico networking
+    - name: get calico networking
+      get_url:
+        url: https://projectcalico.docs.tigera.io/manifests/calico.yaml
+        dest: "{{ home_dir }}/calico.yaml"
+
+    # Apply calico networking
+    - name: apply calico networking
+      become: no
+      command: kubectl apply -f "{{ home_dir }}/calico.yaml"
+
+    # Get dashboard
+    - name: get dashboard
+      get_url:
+        url: https://raw.githubusercontent.com/kubernetes/dashboard/v2.5.0/aio/deploy/recommended.yaml
+        dest: "{{ home_dir }}/dashboard.yaml"
+
+    # Apply dashboard
+    - name: apply dashboard
+      become: no
+      command: kubectl apply -f "{{ home_dir }}/dashboard.yaml"
+
+    # Create metallb-system namespace
+    - name: Create metallb-system namespace
+      become: no
+      command: kubectl create namespace metallb-system
+      ignore_errors: yes # Ignore errors if the namespace already exists
+
+    # Install MetalLB
+    - name: get MetalLB manifests
+      get_url:
+        url: https://raw.githubusercontent.com/metallb/metallb/v0.10.3/manifests/metallb.yaml
+        dest: "{{ home_dir }}/metallb.yaml"
+
+    - name: apply MetalLB manifests
+      become: no
+      command: kubectl apply -f "{{ home_dir }}/metallb.yaml"

@@ -32,3 +32,7 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+terraform/.terraform.lock.hcl
+terraform/terraform-plugin-proxmox.log
+ansible/config
+*.out
